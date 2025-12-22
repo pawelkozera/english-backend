@@ -1,8 +1,8 @@
 package com.app.english.controller;
 
-import com.app.english.dto.AuthResponse;
-import com.app.english.dto.LoginRequest;
-import com.app.english.dto.RegisterRequest;
+import com.app.english.dto.auth.AuthResponse;
+import com.app.english.dto.auth.LoginRequest;
+import com.app.english.dto.auth.RegisterRequest;
 import com.app.english.service.AuthService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
