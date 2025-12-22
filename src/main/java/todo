@@ -1,0 +1,7 @@
+- uczeń może mieć klika grup
+- dołączenie do grupy na podstawie kodu albo linku
+- nauczyciel może tworzyć materiały i przypisywać je do kilku grup (lekcje itp)
+- nauczyciel też może być uczniem
+- nauczyciel może sprawdzać wyniki grupy
+- nauczyciel może ustawić widoczność materiałów dla poszczególnych osób w grupie, żeby nie tworzyć pojedyńczych grup
+- na browse gridzie filtry jakie uczeń widzi lekcje, żeby nauczyciel mógł nimi łatwo zarządzać (i widoczny przycisk aby łatwo dodać dla danego ucznia wtedy lekcje)
