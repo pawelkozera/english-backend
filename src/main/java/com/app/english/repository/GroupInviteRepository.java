@@ -9,9 +9,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface GroupInviteRepository extends JpaRepository<GroupInvite, Long> {
+    Optional<GroupInvite> findByTokenHash(String tokenHash);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    Optional<GroupInvite> findByTokenHash(String tokenHash);
+    Optional<GroupInvite> findOneByTokenHash(String tokenHash);
 
     List<GroupInvite> findByGroupIdOrderByCreatedAtDesc(Long groupId);
 

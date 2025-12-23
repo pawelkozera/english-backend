@@ -63,4 +63,13 @@ public class GroupInviteController {
     ) {
         return inviteService.acceptInvite(request.token(), auth.getName());
     }
+
+    @PostMapping("/api/invites/preview")
+    public InvitePreviewResponse preview(
+            @RequestBody InvitePreviewRequest request,
+            Authentication auth
+    ) {
+        String emailOrNull = (auth == null) ? null : auth.getName();
+        return inviteService.preview(request.token(), emailOrNull);
+    }
 }

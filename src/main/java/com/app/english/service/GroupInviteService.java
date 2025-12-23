@@ -100,7 +100,7 @@ public class GroupInviteService {
 
         String tokenHash = sha256Hex(token);
 
-        GroupInvite invite = inviteRepository.findByTokenHash(tokenHash)
+        GroupInvite invite = inviteRepository.findOneByTokenHash(tokenHash)
                 .orElseThrow(() -> new InviteInvalidException("Invalid invite token"));
 
         Instant now = Instant.now();
@@ -236,5 +236,45 @@ public class GroupInviteService {
         } catch (Exception e) {
             throw new IllegalStateException("Cannot hash token", e);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public InvitePreviewResponse preview(String token, String userEmailOrNull) {
+        if (token == null || token.isBlank()) {
+            throw new InviteInvalidException("Invite token required");
+        }
+
+        String tokenHash = sha256Hex(token);
+
+        GroupInvite invite = inviteRepository.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new InviteInvalidException("Invalid invite token"));
+
+        Instant now = Instant.now();
+        boolean expired = invite.isExpired(now);
+        boolean exhausted = invite.isExhausted();
+        boolean revoked = invite.isRevoked();
+
+        boolean valid = !(expired || exhausted || revoked);
+
+        boolean alreadyMember = false;
+        if (userEmailOrNull != null) {
+            User user = userRepository.findByEmail(userEmailOrNull).orElse(null);
+            if (user != null) {
+                alreadyMember = membershipRepository.existsByUserIdAndGroupId(user.getId(), invite.getGroup().getId());
+            }
+        }
+
+        return new InvitePreviewResponse(
+                valid,
+                invite.getGroup().getName(),
+                invite.getRoleGranted(),
+                invite.getExpiresAt(),
+                invite.getMaxUses(),
+                invite.getUsedCount(),
+                exhausted,
+                revoked,
+                expired,
+                alreadyMember
+        );
     }
 }
