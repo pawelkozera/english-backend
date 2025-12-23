@@ -21,6 +21,7 @@ public class GroupInviteService {
 
     private static final long DEFAULT_EXPIRES_MINUTES = 60 * 24 * 7; // 7 dni
     private static final int TOKEN_BYTES = 32;
+    private static final int MAX_ACTIVE_INVITES_PER_GROUP = 5;
 
     private final SecureRandom random = new SecureRandom();
 
@@ -55,6 +56,8 @@ public class GroupInviteService {
         if (creatorMembership.getRole() != GroupRole.TEACHER) {
             throw new ForbiddenException("Teacher role required");
         }
+
+        enforceInviteLimitOrThrow(groupId, -1L);
 
         User creator = creatorMembership.getUser();
         Group group = creatorMembership.getGroup();
@@ -185,6 +188,9 @@ public class GroupInviteService {
                 .orElseThrow(() -> new InviteInvalidException("Invite not found"));
 
         oldInvite.revoke();
+        inviteRepository.save(oldInvite);
+
+        enforceInviteLimitOrThrow(groupId, inviteId);
 
         Group group = teacherMembership.getGroup();
         User creator = teacherMembership.getUser();
@@ -276,5 +282,21 @@ public class GroupInviteService {
                 expired,
                 alreadyMember
         );
+    }
+
+    private void enforceInviteLimitOrThrow(Long groupId, Long excludeInviteId) {
+        Instant now = Instant.now();
+
+        List<GroupInvite> candidates = inviteRepository.findPurgeCandidatesExcluding(groupId, now, excludeInviteId);
+        if (!candidates.isEmpty()) {
+            List<Long> ids = candidates.stream().map(GroupInvite::getId).toList();
+            inviteUseRepository.deleteByInviteIds(ids);
+            inviteRepository.deleteAllInBatch(candidates);
+        }
+
+        long active = inviteRepository.countActiveInvites(groupId, now);
+        if (active >= MAX_ACTIVE_INVITES_PER_GROUP) {
+            throw new TooManyInvitesException("Too many active invites for this group (max " + MAX_ACTIVE_INVITES_PER_GROUP + ")");
+        }
     }
 }

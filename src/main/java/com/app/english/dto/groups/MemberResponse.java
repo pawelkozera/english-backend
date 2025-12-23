@@ -8,5 +8,6 @@ public record MemberResponse(
         Long userId,
         String email,
         GroupRole role,
-        Instant joinedAt
+        Instant joinedAt,
+        boolean owner
 ) {}

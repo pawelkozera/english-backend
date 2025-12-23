@@ -143,13 +143,16 @@ public class GroupService {
             throw new ForbiddenException("Teacher role required");
         }
 
+        Long ownerId = actor.getGroup().getCreatedBy().getId();
+
         return membershipRepository.findMembersByGroupId(groupId)
                 .stream()
                 .map(m -> new MemberResponse(
                         m.getUser().getId(),
                         m.getUser().getEmail(),
                         m.getRole(),
-                        m.getJoinedAt()
+                        m.getJoinedAt(),
+                        m.getUser().getId().equals(ownerId)
                 ))
                 .toList();
     }
