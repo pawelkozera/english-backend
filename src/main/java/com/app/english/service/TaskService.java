@@ -5,6 +5,7 @@ import com.app.english.dto.tasks.ReplaceTaskVocabularyRequest;
 import com.app.english.dto.tasks.TaskResponse;
 import com.app.english.dto.tasks.UpdateTaskRequest;
 import com.app.english.exceptions.ForbiddenException;
+import com.app.english.exceptions.TaskInUseException;
 import com.app.english.exceptions.TaskNotFoundException;
 import com.app.english.models.*;
 import com.app.english.repository.*;
@@ -22,17 +23,20 @@ public class TaskService {
     private final TaskVocabularyRepository taskVocabularyRepository;
     private final VocabularyRepository vocabularyRepository;
     private final UserRepository userRepository;
+    private final LessonItemRepository lessonItemRepository;
 
     public TaskService(
             TaskRepository taskRepository,
             TaskVocabularyRepository taskVocabularyRepository,
             VocabularyRepository vocabularyRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            LessonItemRepository lessonItemRepository
     ) {
         this.taskRepository = taskRepository;
         this.taskVocabularyRepository = taskVocabularyRepository;
         this.vocabularyRepository = vocabularyRepository;
         this.userRepository = userRepository;
+        this.lessonItemRepository = lessonItemRepository;
     }
 
     @Transactional
@@ -120,6 +124,12 @@ public class TaskService {
 
         if (!task.getCreatedBy().getId().equals(actor.getId())) {
             throw new ForbiddenException("Not allowed");
+        }
+
+        boolean usedInLessons = lessonItemRepository.existsByTaskId(taskId);
+
+        if (usedInLessons) {
+            throw new TaskInUseException("Cannot delete task: it is used in at least one lesson");
         }
 
         taskVocabularyRepository.deleteByTaskId(taskId);

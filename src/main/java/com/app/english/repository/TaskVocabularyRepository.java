@@ -17,7 +17,7 @@ public interface TaskVocabularyRepository extends JpaRepository<TaskVocabulary, 
     """)
     List<Long> findVocabularyIds(Long taskId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from TaskVocabulary tv where tv.task.id = :taskId")
     int deleteByTaskId(Long taskId);
 }

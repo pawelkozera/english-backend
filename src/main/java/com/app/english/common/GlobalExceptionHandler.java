@@ -2,6 +2,7 @@ package com.app.english.common;
 
 import com.app.english.dto.ErrorResponse;
 import com.app.english.exceptions.*;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -104,6 +105,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(com.app.english.exceptions.MediaInUseException.class)
     public ResponseEntity<ErrorResponse> mediaInUse(com.app.english.exceptions.MediaInUseException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(ex.getMessage(), 409, Instant.now()));
+    }
+
+    @ExceptionHandler(com.app.english.exceptions.LessonNotFoundException.class)
+    public ResponseEntity<ErrorResponse> lessonNotFound(com.app.english.exceptions.LessonNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(ex.getMessage(), 404, Instant.now()));
+    }
+
+    @ExceptionHandler(TaskInUseException.class)
+    public ResponseEntity<ErrorResponse> taskInUse(TaskInUseException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(ex.getMessage(), 409, Instant.now()));
     }

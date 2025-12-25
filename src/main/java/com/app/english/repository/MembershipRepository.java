@@ -45,4 +45,7 @@ public interface MembershipRepository extends JpaRepository<Membership, Long> {
            order by m.joinedAt asc
            """)
     List<Membership> findMembersByGroupId(Long groupId);
+
+    @Query("select m.group.id from Membership m where m.user.id = :userId")
+    List<Long> findGroupIdsByUserId(Long userId);
 }
