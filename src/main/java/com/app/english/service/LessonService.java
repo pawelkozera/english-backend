@@ -3,6 +3,7 @@ package com.app.english.service;
 import com.app.english.dto.lessons.*;
 import com.app.english.exceptions.ForbiddenException;
 import com.app.english.exceptions.GroupNotFoundException;
+import com.app.english.exceptions.LessonAlreadyAssignedException;
 import com.app.english.exceptions.LessonNotFoundException;
 import com.app.english.models.*;
 import com.app.english.repository.*;
@@ -173,6 +174,17 @@ public class LessonService {
 
         User assignedTo = null;
         Long assignedToUserId = req.assignedToUserId();
+
+        if (assignedToUserId == null) {
+            if (lessonAssignmentRepository.existsGroupWide(groupId, lessonId)) {
+                throw new LessonAlreadyAssignedException("Lesson already assigned to this group");
+            }
+        } else {
+            if (lessonAssignmentRepository.existsForUser(groupId, lessonId, assignedToUserId)) {
+                throw new LessonAlreadyAssignedException("Lesson already assigned to this user in this group");
+            }
+        }
+
         if (assignedToUserId != null) {
             boolean isMember = membershipRepository.existsByUserIdAndGroupId(assignedToUserId, groupId);
             if (!isMember) throw new IllegalArgumentException("Assigned user is not a member of this group");
@@ -318,6 +330,57 @@ public class LessonService {
             lesson.archive();
         }
     }
+
+    @Transactional
+    public void unassignLesson(String actorEmail, Long groupId, Long assignmentId) {
+        Membership m = membershipRepository.findByUserEmailAndGroupId(actorEmail, groupId)
+                .orElseThrow(() -> {
+                    if (!groupRepository.existsById(groupId)) return new GroupNotFoundException("Group not found");
+                    return new ForbiddenException("Not a member of this group");
+                });
+
+        if (m.getRole() != GroupRole.TEACHER) {
+            throw new ForbiddenException("Teacher role required");
+        }
+
+        LessonAssignment a = lessonAssignmentRepository.findByIdAndGroupId(assignmentId, groupId)
+                .orElseThrow(() -> new IllegalArgumentException("Assignment not found"));
+
+        lessonAssignmentRepository.delete(a);
+    }
+
+    @Transactional
+    public LessonAssignmentResponse updateAssignment(
+            String actorEmail,
+            Long groupId,
+            Long assignmentId,
+            UpdateLessonAssignmentRequest req
+    ) {
+        Membership m = membershipRepository.findByUserEmailAndGroupId(actorEmail, groupId)
+                .orElseThrow(() -> {
+                    if (!groupRepository.existsById(groupId)) return new GroupNotFoundException("Group not found");
+                    return new ForbiddenException("Not a member of this group");
+                });
+
+        if (m.getRole() != GroupRole.TEACHER) {
+            throw new ForbiddenException("Teacher role required");
+        }
+
+        LessonAssignment a = lessonAssignmentRepository.findByIdAndGroupId(assignmentId, groupId)
+                .orElseThrow(() -> new IllegalArgumentException("Assignment not found"));
+
+        if (req.visibleFrom() != null && req.visibleTo() != null && req.visibleFrom().isAfter(req.visibleTo())) {
+            throw new IllegalArgumentException("visibleFrom must be <= visibleTo");
+        }
+
+        a.setVisibleFrom(req.visibleFrom());
+        a.setVisibleTo(req.visibleTo());
+
+        lessonAssignmentRepository.save(a);
+
+        return toAssignmentResponse(a);
+    }
+
 
     private List<LessonItemResponse> loadItems(Long lessonId) {
         return lessonItemRepository.findByLessonIdOrderByPosition(lessonId)

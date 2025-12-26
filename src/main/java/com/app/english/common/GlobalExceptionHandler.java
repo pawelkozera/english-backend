@@ -120,4 +120,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(ex.getMessage(), 409, Instant.now()));
     }
+
+    @ExceptionHandler(LessonAlreadyAssignedException.class)
+    public ResponseEntity<ErrorResponse> lessonAlreadyAssigned(LessonAlreadyAssignedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(ex.getMessage(), 409, Instant.now()));
+    }
 }

@@ -3,10 +3,12 @@ package com.app.english.controller;
 import com.app.english.dto.lessons.AssignLessonRequest;
 import com.app.english.dto.lessons.LessonAssignmentResponse;
 import com.app.english.dto.lessons.ReorderLessonAssignmentsRequest;
+import com.app.english.dto.lessons.UpdateLessonAssignmentRequest;
 import com.app.english.service.LessonService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,6 +54,26 @@ public class GroupLessonAssignmentController {
             Authentication auth
     ) {
         lessonService.reorderAssignmentsForGroup(auth.getName(), groupId, req);
+    }
+
+    @DeleteMapping("/assignments/{assignmentId}")
+    public ResponseEntity<Void> unassign(
+            @PathVariable Long groupId,
+            @PathVariable Long assignmentId,
+            Authentication auth
+    ) {
+        lessonService.unassignLesson(auth.getName(), groupId, assignmentId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/assignments/{assignmentId}")
+    public LessonAssignmentResponse updateAssignment(
+            @PathVariable Long groupId,
+            @PathVariable Long assignmentId,
+            @RequestBody UpdateLessonAssignmentRequest req,
+            Authentication auth
+    ) {
+        return lessonService.updateAssignment(auth.getName(), groupId, assignmentId, req);
     }
 }
 

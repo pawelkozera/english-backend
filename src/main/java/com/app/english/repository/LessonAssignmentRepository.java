@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.Instant;
-import java.util.Collection;
+import java.util.Optional;
 import java.util.List;
 
 public interface LessonAssignmentRepository extends JpaRepository<LessonAssignment, Long> {
@@ -108,4 +108,22 @@ public interface LessonAssignmentRepository extends JpaRepository<LessonAssignme
         order by a.displayOrder asc, a.createdAt desc
     """)
     List<LessonAssignment> findForGroup(Long groupId, Long userId);
+
+    @Query("""
+        select (count(a) > 0) from LessonAssignment a
+        where a.group.id = :groupId
+          and a.lesson.id = :lessonId
+          and a.assignedToUser is null
+    """)
+    boolean existsGroupWide(Long groupId, Long lessonId);
+
+    @Query("""
+        select (count(a) > 0) from LessonAssignment a
+        where a.group.id = :groupId
+          and a.lesson.id = :lessonId
+          and a.assignedToUser.id = :userId
+    """)
+    boolean existsForUser(Long groupId, Long lessonId, Long userId);
+
+    Optional<LessonAssignment> findByIdAndGroupId(Long id, Long groupId);
 }

@@ -86,4 +86,10 @@ public class LessonAssignment {
     public Instant getCreatedAt() { return createdAt; }
 
     public void setDisplayOrder(long displayOrder) { this.displayOrder = displayOrder; }
+    public void setVisibleFrom(Instant visibleFrom) {
+        this.visibleFrom = visibleFrom;
+    }
+    public void setVisibleTo(Instant visibleTo) {
+        this.visibleTo = visibleTo;
+    }
 }
