@@ -1,9 +1,6 @@
 package com.app.english.controller;
 
-import com.app.english.dto.lessons.AssignLessonRequest;
-import com.app.english.dto.lessons.LessonAssignmentResponse;
-import com.app.english.dto.lessons.ReorderLessonAssignmentsRequest;
-import com.app.english.dto.lessons.UpdateLessonAssignmentRequest;
+import com.app.english.dto.lessons.*;
 import com.app.english.service.LessonService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -74,6 +71,15 @@ public class GroupLessonAssignmentController {
             Authentication auth
     ) {
         return lessonService.updateAssignment(auth.getName(), groupId, assignmentId, req);
+    }
+
+    @PostMapping("/assignments/bulk")
+    public BulkAssignLessonsResponse bulkAssign(
+            @PathVariable Long groupId,
+            @RequestBody BulkAssignLessonsRequest req,
+            Authentication auth
+    ) {
+        return lessonService.bulkAssignLessons(auth.getName(), groupId, req);
     }
 }
 

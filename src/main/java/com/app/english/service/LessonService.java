@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -381,6 +382,105 @@ public class LessonService {
         return toAssignmentResponse(a);
     }
 
+    @Transactional
+    public BulkAssignLessonsResponse bulkAssignLessons(String actorEmail, Long groupId, BulkAssignLessonsRequest req) {
+        Membership m = membershipRepository.findByUserEmailAndGroupId(actorEmail, groupId)
+                .orElseThrow(() -> {
+                    if (!groupRepository.existsById(groupId)) return new GroupNotFoundException("Group not found");
+                    return new ForbiddenException("Not a member of this group");
+                });
+
+        if (m.getRole() != GroupRole.TEACHER) {
+            throw new ForbiddenException("Teacher role required");
+        }
+
+        if (req.lessonIds() == null || req.lessonIds().isEmpty()) {
+            return new BulkAssignLessonsResponse(List.of(), List.of());
+        }
+
+        Instant from = req.visibleFrom();
+        Instant to = req.visibleTo();
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new IllegalArgumentException("visibleFrom must be <= visibleTo");
+        }
+
+        LinkedHashSet<Long> unique = new LinkedHashSet<>(req.lessonIds());
+        List<Long> lessonIds = new ArrayList<>(unique);
+
+        Long assignedToUserId = req.assignedToUserId();
+        User assignedToUser = null;
+
+        if (assignedToUserId != null) {
+            if (!membershipRepository.existsByUserIdAndGroupId(assignedToUserId, groupId)) {
+                throw new IllegalArgumentException("User is not a member of this group");
+            }
+            assignedToUser = userRepository.findById(assignedToUserId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        }
+
+        Group group = m.getGroup();
+
+        List<Lesson> lessons = lessonRepository.findAllById(lessonIds);
+        Set<Long> found = lessons.stream().map(Lesson::getId).collect(Collectors.toSet());
+        List<Long> missing = lessonIds.stream().filter(id -> !found.contains(id)).toList();
+        if (!missing.isEmpty()) {
+            throw new LessonNotFoundException("Lessons not found: " + missing);
+        }
+
+        Map<Long, Long> existing = new HashMap<>();
+        List<Object[]> rows = (assignedToUserId == null)
+                ? lessonAssignmentRepository.findExistingGroupWide(groupId, lessonIds)
+                : lessonAssignmentRepository.findExistingForUser(groupId, assignedToUserId, lessonIds);
+
+        for (Object[] r : rows) {
+            Long lId = (Long) r[0];
+            Long aId = (Long) r[1];
+            existing.put(lId, aId);
+        }
+
+        List<BulkAssignLessonsResponse.Skipped> skipped = new ArrayList<>();
+        List<LessonAssignmentResponse> created = new ArrayList<>();
+
+        List<Long> toCreateIds = lessonIds.stream().filter(id -> !existing.containsKey(id)).toList();
+        int nNew = toCreateIds.size();
+        if (nNew == 0) {
+            for (Long id : lessonIds) {
+                Long exId = existing.get(id);
+                skipped.add(new BulkAssignLessonsResponse.Skipped(id, "ALREADY_ASSIGNED", exId));
+            }
+            return new BulkAssignLessonsResponse(created, skipped);
+        }
+
+        Long currentMin = lessonAssignmentRepository.findMinDisplayOrder(groupId, assignedToUserId);
+        long base = (currentMin == null ? 0L : currentMin) - nNew;
+
+        Map<Long, Lesson> byId = lessons.stream().collect(Collectors.toMap(Lesson::getId, l -> l));
+
+        for (Long id : lessonIds) {
+            if (existing.containsKey(id)) {
+                skipped.add(new BulkAssignLessonsResponse.Skipped(id, "ALREADY_ASSIGNED", existing.get(id)));
+                continue;
+            }
+
+            Lesson lesson = byId.get(id);
+            User assignedBy = m.getUser();
+            LessonAssignment a = new LessonAssignment(
+                    group,
+                    lesson,
+                    assignedToUser,
+                    assignedBy,
+                    from,
+                    to,
+                    base
+            );
+            base++;
+
+            LessonAssignment saved = lessonAssignmentRepository.save(a);
+            created.add(toAssignmentResponse(saved));
+        }
+
+        return new BulkAssignLessonsResponse(created, skipped);
+    }
 
     private List<LessonItemResponse> loadItems(Long lessonId) {
         return lessonItemRepository.findByLessonIdOrderByPosition(lessonId)
