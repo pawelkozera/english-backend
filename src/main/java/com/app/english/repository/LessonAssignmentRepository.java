@@ -143,4 +143,14 @@ public interface LessonAssignmentRepository extends JpaRepository<LessonAssignme
           and a.lesson.id in :lessonIds
     """)
     List<Object[]> findExistingForUser(Long groupId, Long userId, Collection<Long> lessonIds);
+
+    @Query("""
+        select a from LessonAssignment a
+        join fetch a.lesson l
+        join fetch a.group g
+        left join fetch a.assignedToUser u
+        join fetch a.assignedBy ab
+        where a.id = :assignmentId
+    """)
+    Optional<LessonAssignment> findByIdWithLessonAndGroup(Long assignmentId);
 }

@@ -20,5 +20,13 @@ public interface LessonItemRepository extends JpaRepository<LessonItem, Long> {
     @Modifying
     @Query("delete from LessonItem li where li.lesson.id = :lessonId")
     int deleteByLessonId(Long lessonId);
+
+    @Query("""
+        select li.task.id
+        from LessonItem li
+        where li.lesson.id = :lessonId and li.task is not null
+        order by li.position asc
+    """)
+    List<Long> findTaskIdsForLesson(Long lessonId);
 }
 
